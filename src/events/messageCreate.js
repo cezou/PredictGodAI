@@ -1,5 +1,5 @@
-import { Events, EmbedBuilder } from 'discord.js';
-import { popActivePredictsFor } from '../db.js';
+import { Events } from 'discord.js';
+import { popActiveMessagePredictsFor } from '../db.js';
 
 export const name = Events.MessageCreate;
 
@@ -10,7 +10,7 @@ export function register(client) {
 
     let consumed;
     try {
-      consumed = popActivePredictsFor(message.channel.id, message.author.id);
+      consumed = popActiveMessagePredictsFor(message.channel.id, message.author.id);
     } catch (err) {
       console.error('DB error in messageCreate:', err);
       return;
@@ -18,19 +18,13 @@ export function register(client) {
     if (!consumed.length) return;
 
     for (const row of consumed) {
-      const author = await client.users.fetch(row.author_id).catch(() => null);
-      const authorTag = author ? `@${author.username}` : 'Quelqu\'un';
-
-      const embed = new EmbedBuilder()
-        .setAuthor({
-          name: `${authorTag} predicted`,
-          iconURL: author?.displayAvatarURL?.() ?? undefined,
-        })
-        .setDescription(`« ${row.message} »`)
-        .setColor(0x2b2d31);
+      const content = `-# <@${row.author_id}> predicted\n${row.message}`;
 
       await message
-        .reply({ embeds: [embed], allowedMentions: { repliedUser: false } })
+        .reply({
+          content,
+          allowedMentions: { repliedUser: false, parse: [] },
+        })
         .catch((err) => console.error('Failed to send predict reveal:', err));
     }
   });

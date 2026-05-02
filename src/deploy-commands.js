@@ -12,17 +12,31 @@ if (!DISCORD_TOKEN || !CLIENT_ID) {
 const commands = [predictCommand.data.toJSON()];
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
-const route = GUILD_ID
-  ? Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID)
-  : Routes.applicationCommands(CLIENT_ID);
+const guildIds = (GUILD_ID ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 
-const scope = GUILD_ID ? `guild ${GUILD_ID}` : 'global';
-console.log(`Déploiement de ${commands.length} commande(s) (${scope})...`);
-
-try {
-  const data = await rest.put(route, { body: commands });
-  console.log(`✅ ${data.length} commande(s) enregistrée(s).`);
-} catch (err) {
-  console.error('Échec du déploiement :', err);
-  process.exit(1);
+if (guildIds.length === 0) {
+  console.log(`Deploying ${commands.length} command(s) globally...`);
+  try {
+    const data = await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+    console.log(`✅ ${data.length} command(s) registered globally.`);
+  } catch (err) {
+    console.error('Global deployment failed:', err);
+    process.exit(1);
+  }
+} else {
+  for (const guildId of guildIds) {
+    console.log(`Deploying ${commands.length} command(s) (guild ${guildId})...`);
+    try {
+      const data = await rest.put(Routes.applicationGuildCommands(CLIENT_ID, guildId), {
+        body: commands,
+      });
+      console.log(`✅ ${data.length} command(s) registered for guild ${guildId}.`);
+    } catch (err) {
+      console.error(`Failed for guild ${guildId}:`, err);
+      process.exit(1);
+    }
+  }
 }

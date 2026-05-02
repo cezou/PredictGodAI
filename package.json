@@ -1,13 +1,15 @@
 {
   "name": "predictgodai",
   "version": "0.1.0",
-  "description": "Bot Discord de prédictions cachées",
+  "description": "Discord bot for hidden predictions — predict what someone is about to say or react with",
   "private": true,
   "type": "module",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "deploy": "node src/deploy-commands.js"
+    "deploy": "node src/deploy-commands.js",
+    "format": "prettier --write \"src/**/*.js\" \"*.{json,md}\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"*.{json,md}\""
   },
   "engines": {
     "node": ">=20"
@@ -17,5 +19,8 @@
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5",
     "luxon": "^3.5.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3"
   }
 }

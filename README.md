@@ -21,7 +21,7 @@ A Discord bot for hidden predictions. Predict what someone is about to say in a 
 1. Go to https://discord.com/developers/applications → **New Application** → name: `PredictGodAI`.
 2. **Bot** tab → **Reset Token** → copy the token (= `DISCORD_TOKEN`).
 3. **General Information** tab → copy the **Application ID** (= `CLIENT_ID`).
-4. **Bot** tab → no need to enable *Privileged Intents*.
+4. **Bot** tab → no need to enable _Privileged Intents_.
 5. **OAuth2 → URL Generator**:
    - scopes: `bot`, `applications.commands`
    - bot permissions: `View Channels`, `Send Messages`, `Embed Links`, `Read Message History`
@@ -38,7 +38,7 @@ GUILD_ID=your_test_server_id
 ```
 
 > `GUILD_ID` is optional but **recommended in dev**: the `/predict` command appears instantly on that server. Without `GUILD_ID`, the command is registered globally and may take up to 1h to appear.
-> To get a server ID: Discord → Settings → Advanced → enable **Developer Mode**, then right-click the server → *Copy Server ID*.
+> To get a server ID: Discord → Settings → Advanced → enable **Developer Mode**, then right-click the server → _Copy Server ID_.
 
 ### 3. Install and run
 

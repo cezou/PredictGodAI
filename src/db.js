@@ -25,50 +25,83 @@ db.exec(`
     created_at INTEGER NOT NULL,
     resolved_at INTEGER
   );
+`);
 
+const cols = db
+  .prepare('PRAGMA table_info(predicts)')
+  .all()
+  .map((r) => r.name);
+if (!cols.includes('type')) {
+  db.exec(`ALTER TABLE predicts ADD COLUMN type TEXT NOT NULL DEFAULT 'message'`);
+}
+
+db.exec(`
+  DROP INDEX IF EXISTS uq_active_predict;
   CREATE UNIQUE INDEX IF NOT EXISTS uq_active_predict
-    ON predicts(channel_id, author_id, target_id)
+    ON predicts(channel_id, author_id, target_id, type)
     WHERE resolved_at IS NULL;
 
+  DROP INDEX IF EXISTS idx_active_target;
   CREATE INDEX IF NOT EXISTS idx_active_target
-    ON predicts(channel_id, target_id)
+    ON predicts(channel_id, target_id, type)
     WHERE resolved_at IS NULL;
 
   CREATE INDEX IF NOT EXISTS idx_quota
-    ON predicts(author_id, created_at);
+    ON predicts(author_id, type, created_at);
 `);
 
 const stmtCountToday = db.prepare(
-  'SELECT COUNT(*) AS n FROM predicts WHERE author_id = ? AND created_at >= ?'
+  'SELECT COUNT(*) AS n FROM predicts WHERE author_id = ? AND type = ? AND created_at >= ?',
 );
 const stmtHasActive = db.prepare(
-  'SELECT 1 FROM predicts WHERE channel_id = ? AND author_id = ? AND target_id = ? AND resolved_at IS NULL LIMIT 1'
+  'SELECT 1 FROM predicts WHERE channel_id = ? AND author_id = ? AND target_id = ? AND type = ? AND resolved_at IS NULL LIMIT 1',
 );
 const stmtInsert = db.prepare(
-  'INSERT INTO predicts (guild_id, channel_id, author_id, target_id, message, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+  'INSERT INTO predicts (guild_id, channel_id, author_id, target_id, message, created_at, type) VALUES (?, ?, ?, ?, ?, ?, ?)',
 );
-const stmtSelectActiveForTarget = db.prepare(
-  'SELECT id, author_id, message FROM predicts WHERE channel_id = ? AND target_id = ? AND resolved_at IS NULL'
+const stmtSelectActiveMessage = db.prepare(
+  "SELECT id, author_id, message FROM predicts WHERE channel_id = ? AND target_id = ? AND type = 'message' AND resolved_at IS NULL",
+);
+const stmtSelectActiveReaction = db.prepare(
+  "SELECT id, author_id, message FROM predicts WHERE channel_id = ? AND target_id = ? AND author_id = ? AND type = 'reaction' AND resolved_at IS NULL",
 );
 const stmtResolve = db.prepare(
-  'UPDATE predicts SET resolved_at = ? WHERE id = ? AND resolved_at IS NULL'
+  'UPDATE predicts SET resolved_at = ? WHERE id = ? AND resolved_at IS NULL',
 );
 
-export function countTodayPredicts(authorId) {
+export function countTodayPredicts(authorId, type = 'message') {
   const startOfDayParis = DateTime.now().setZone('Europe/Paris').startOf('day').toMillis();
-  return stmtCountToday.get(authorId, startOfDayParis).n;
+  return stmtCountToday.get(authorId, type, startOfDayParis).n;
 }
 
-export function hasActivePredict(channelId, authorId, targetId) {
-  return !!stmtHasActive.get(channelId, authorId, targetId);
+export function hasActivePredict(channelId, authorId, targetId, type = 'message') {
+  return !!stmtHasActive.get(channelId, authorId, targetId, type);
 }
 
-export function createPredict({ guildId, channelId, authorId, targetId, message }) {
-  stmtInsert.run(guildId, channelId, authorId, targetId, message, Date.now());
+export function createPredict({
+  guildId,
+  channelId,
+  authorId,
+  targetId,
+  message,
+  type = 'message',
+}) {
+  stmtInsert.run(guildId, channelId, authorId, targetId, message, Date.now(), type);
 }
 
-export const popActivePredictsFor = db.transaction((channelId, targetId) => {
-  const rows = stmtSelectActiveForTarget.all(channelId, targetId);
+export const popActiveMessagePredictsFor = db.transaction((channelId, targetId) => {
+  const rows = stmtSelectActiveMessage.all(channelId, targetId);
+  const now = Date.now();
+  const consumed = [];
+  for (const row of rows) {
+    const res = stmtResolve.run(now, row.id);
+    if (res.changes === 1) consumed.push(row);
+  }
+  return consumed;
+});
+
+export const popActiveReactionPredictsFor = db.transaction((channelId, targetId, authorId) => {
+  const rows = stmtSelectActiveReaction.all(channelId, targetId, authorId);
   const now = Date.now();
   const consumed = [];
   for (const row of rows) {

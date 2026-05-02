@@ -12,7 +12,7 @@ export const data = new SlashCommandBuilder()
   )
   .addUserOption((opt) =>
     opt
-      .setName('finaltarget')
+      .setName('targetofthetarget')
       .setDescription('The person who will trigger by speaking')
       .setRequired(true),
   )
@@ -27,7 +27,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction) {
   const target = interaction.options.getUser('target', true);
-  const finalTarget = interaction.options.getUser('finaltarget', true);
+  const finalTarget = interaction.options.getUser('targetofthetarget', true);
   const message = interaction.options.getString('prediction', true);
   const author = interaction.user;
   const channelId = interaction.channelId;
@@ -39,7 +39,7 @@ export async function execute(interaction) {
     return reply("You can't involve PredictGodAI in a predictpredict");
   }
   if (target.id === finalTarget.id) {
-    return reply('Target and finaltarget must be different people');
+    return reply('Target and targetofthetarget must be different people');
   }
   if (target.id === author.id) {
     return reply("You can't predict your own predict");

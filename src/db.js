@@ -48,6 +48,29 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_quota
     ON predicts(author_id, type, created_at);
+
+  CREATE TABLE IF NOT EXISTS metapredicts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    author_id TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    final_target_id TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    resolved_at INTEGER
+  );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS uq_active_metapredict
+    ON metapredicts(channel_id, author_id, target_id, final_target_id)
+    WHERE resolved_at IS NULL;
+
+  CREATE INDEX IF NOT EXISTS idx_active_meta_final
+    ON metapredicts(channel_id, final_target_id)
+    WHERE resolved_at IS NULL;
+
+  CREATE INDEX IF NOT EXISTS idx_meta_quota
+    ON metapredicts(author_id, created_at);
 `);
 
 const stmtCountToday = db.prepare(
@@ -106,6 +129,53 @@ export const popActiveReactionPredictsFor = db.transaction((channelId, targetId,
   const consumed = [];
   for (const row of rows) {
     const res = stmtResolve.run(now, row.id);
+    if (res.changes === 1) consumed.push(row);
+  }
+  return consumed;
+});
+
+const stmtCountTodayMeta = db.prepare(
+  'SELECT COUNT(*) AS n FROM metapredicts WHERE author_id = ? AND created_at >= ?',
+);
+const stmtHasActiveMeta = db.prepare(
+  'SELECT 1 FROM metapredicts WHERE channel_id = ? AND author_id = ? AND target_id = ? AND final_target_id = ? AND resolved_at IS NULL LIMIT 1',
+);
+const stmtInsertMeta = db.prepare(
+  'INSERT INTO metapredicts (guild_id, channel_id, author_id, target_id, final_target_id, message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+);
+const stmtSelectActiveMeta = db.prepare(
+  'SELECT id, author_id, target_id, message FROM metapredicts WHERE channel_id = ? AND final_target_id = ? AND resolved_at IS NULL',
+);
+const stmtResolveMeta = db.prepare(
+  'UPDATE metapredicts SET resolved_at = ? WHERE id = ? AND resolved_at IS NULL',
+);
+
+export function countTodayMetaPredicts(authorId) {
+  const startOfDayParis = DateTime.now().setZone('Europe/Paris').startOf('day').toMillis();
+  return stmtCountTodayMeta.get(authorId, startOfDayParis).n;
+}
+
+export function hasActiveMetaPredict(channelId, authorId, targetId, finalTargetId) {
+  return !!stmtHasActiveMeta.get(channelId, authorId, targetId, finalTargetId);
+}
+
+export function createMetaPredict({
+  guildId,
+  channelId,
+  authorId,
+  targetId,
+  finalTargetId,
+  message,
+}) {
+  stmtInsertMeta.run(guildId, channelId, authorId, targetId, finalTargetId, message, Date.now());
+}
+
+export const popActiveMetaPredictsFor = db.transaction((channelId, finalTargetId) => {
+  const rows = stmtSelectActiveMeta.all(channelId, finalTargetId);
+  const now = Date.now();
+  const consumed = [];
+  for (const row of rows) {
+    const res = stmtResolveMeta.run(now, row.id);
     if (res.changes === 1) consumed.push(row);
   }
   return consumed;

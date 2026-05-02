@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { REST, Routes } from 'discord.js';
 import * as predictCommand from './commands/predict.js';
+import * as predictpredictCommand from './commands/predictpredict.js';
 
 const { DISCORD_TOKEN, CLIENT_ID, GUILD_ID } = process.env;
 
@@ -9,7 +10,7 @@ if (!DISCORD_TOKEN || !CLIENT_ID) {
   process.exit(1);
 }
 
-const commands = [predictCommand.data.toJSON()];
+const commands = [predictCommand.data.toJSON(), predictpredictCommand.data.toJSON()];
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
 const guildIds = (GUILD_ID ?? '')

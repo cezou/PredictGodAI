@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js';
 import * as predictCommand from './commands/predict.js';
+import * as predictpredictCommand from './commands/predictpredict.js';
 import * as interactionCreate from './events/interactionCreate.js';
 import * as messageCreate from './events/messageCreate.js';
 import * as messageReactionAdd from './events/messageReactionAdd.js';
@@ -22,6 +23,7 @@ const client = new Client({
 
 client.commands = new Collection();
 client.commands.set(predictCommand.data.name, predictCommand);
+client.commands.set(predictpredictCommand.data.name, predictpredictCommand);
 
 interactionCreate.register(client);
 messageCreate.register(client);

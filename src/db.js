@@ -1,8 +1,9 @@
-import { Sequelize, DataTypes, Op } from 'sequelize';
+import { Sequelize, Op } from 'sequelize';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DateTime } from 'luxon';
+import definePrediction from './models/Prediction.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DB_PATH = resolve(__dirname, '..', 'data', 'predicts.db');
@@ -15,15 +16,7 @@ export const sequelize = new Sequelize({
   logging: false,
 });
 
-export const Prediction = sequelize.define('Prediction', {
-  guildId: { type: DataTypes.STRING, allowNull: false },
-  channelId: { type: DataTypes.STRING, allowNull: false },
-  authorId: { type: DataTypes.STRING, allowNull: false },
-  targetId: { type: DataTypes.STRING, allowNull: false },
-  type: { type: DataTypes.STRING, allowNull: false }, // 'message', 'reaction', 'counter'
-  content: { type: DataTypes.STRING, allowNull: false },
-  resolvedAt: { type: DataTypes.DATE, allowNull: true },
-});
+export const Prediction = definePrediction(sequelize);
 
 export async function countTodayPredicts(authorId, type) {
   const startOfDayParis = DateTime.now().setZone('Europe/Paris').startOf('day').toJSDate();

@@ -1,5 +1,5 @@
 import { Events } from 'discord.js';
-import { popActiveMessagePredictsFor, popActiveMetaPredictsFor } from '../db.js';
+import { popActivePredictsFor } from '../db.js';
 
 export const name = Events.MessageCreate;
 
@@ -9,42 +9,45 @@ export function register(client) {
     if (!message.inGuild()) return;
 
     let messagePredicts = [];
-    let metaPredicts = [];
+    let counterPredicts = [];
     try {
-      messagePredicts = popActiveMessagePredictsFor(message.channel.id, message.author.id);
-      metaPredicts = popActiveMetaPredictsFor(message.channel.id, message.author.id);
+      messagePredicts = await popActivePredictsFor(
+        message.channel.id,
+        message.author.id,
+        'message',
+      );
+      counterPredicts = await popActivePredictsFor(
+        message.channel.id,
+        message.author.id,
+        'counter',
+      );
     } catch (err) {
       console.error('DB error in messageCreate:', err);
       return;
     }
-    if (!messagePredicts.length && !metaPredicts.length) return;
-
-    const revealByPredicter = new Map();
+    if (!messagePredicts.length && !counterPredicts.length) return;
 
     for (const row of messagePredicts) {
-      const content = `-# <@${row.author_id}> predicted\n${row.message}`;
+      const content = `-# <@${row.authorId}> predicted\n${row.content}`;
       try {
-        const reveal = await message.reply({
+        await message.reply({
           content,
           allowedMentions: { repliedUser: false, parse: [] },
         });
-        revealByPredicter.set(row.author_id, reveal.id);
       } catch (err) {
         console.error('Failed to send predict reveal:', err);
       }
     }
 
-    for (const row of metaPredicts) {
-      const content = `-# <@${row.author_id}> predicted that <@${row.target_id}> would predict <@${message.author.id}>\n${row.message}`;
-      const parentId = revealByPredicter.get(row.target_id) ?? message.id;
+    for (const row of counterPredicts) {
+      const content = `-# <@${row.authorId}> counter-predicted\n${row.content}`;
       try {
-        await message.channel.send({
+        await message.reply({
           content,
-          reply: { messageReference: parentId, failIfNotExists: false },
           allowedMentions: { repliedUser: false, parse: [] },
         });
       } catch (err) {
-        console.error('Failed to send metapredict reveal:', err);
+        console.error('Failed to send counterpredict reveal:', err);
       }
     }
   });

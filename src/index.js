@@ -1,10 +1,11 @@
 import 'dotenv/config';
 import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js';
 import * as predictCommand from './commands/predict.js';
-import * as predictpredictCommand from './commands/predictpredict.js';
+import * as counterpredictCommand from './commands/counterpredict.js';
 import * as interactionCreate from './events/interactionCreate.js';
 import * as messageCreate from './events/messageCreate.js';
 import * as messageReactionAdd from './events/messageReactionAdd.js';
+import { sequelize } from './db.js';
 
 const token = process.env.DISCORD_TOKEN;
 if (!token) {
@@ -23,7 +24,7 @@ const client = new Client({
 
 client.commands = new Collection();
 client.commands.set(predictCommand.data.name, predictCommand);
-client.commands.set(predictpredictCommand.data.name, predictpredictCommand);
+client.commands.set(counterpredictCommand.data.name, counterpredictCommand);
 
 interactionCreate.register(client);
 messageCreate.register(client);
@@ -32,5 +33,13 @@ messageReactionAdd.register(client);
 client.once('clientReady', (c) => {
   console.log(`Logged in as ${c.user.tag}`);
 });
+
+try {
+  await sequelize.sync();
+  console.log('Database synced');
+} catch (err) {
+  console.error('Failed to sync database:', err);
+  process.exit(1);
+}
 
 client.login(token);

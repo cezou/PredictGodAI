@@ -1,5 +1,10 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
-import { countTodayPredicts, hasActivePredict, createPredict } from '../db.js';
+import {
+  countTodayPredicts,
+  hasActivePredict,
+  createPredict,
+  findAndResolveMatchingCounter,
+} from '../db.js';
 import { validateEmoji } from '../util/emoji.js';
 
 const DAILY_LIMIT = 4;
@@ -42,25 +47,43 @@ export async function execute(interaction) {
   const stored = emoji ? emoji.raw : rawPrediction;
 
   if (DAILY_LIMIT_ENABLED) {
-    const todayCount = countTodayPredicts(author.id, type);
+    const todayCount = await countTodayPredicts(author.id, type);
     if (todayCount >= DAILY_LIMIT) {
       return reply("You're cooked chief, try again tomorrow 💀");
     }
   }
 
-  if (hasActivePredict(channelId, author.id, target.id, type)) {
+  const matchingCounter = await findAndResolveMatchingCounter(channelId, author.id, stored);
+  if (matchingCounter) {
+    try {
+      await createPredict({
+        guildId,
+        channelId,
+        authorId: author.id,
+        targetId: target.id,
+        content: stored,
+        type,
+        resolvedAt: new Date(),
+      });
+    } catch (e) {}
+    return interaction.reply({
+      content: `COUNTER : <@${matchingCounter.authorId}> a contré la prédiction de <@${author.id}> https://tenor.com/view/venom-dunking-on-spiderman-gif-26119954`,
+    });
+  }
+
+  if (await hasActivePredict(channelId, author.id, target.id, type)) {
     return reply(
       `You can't predict twice a same people, wait for him to answer, we never know I swear`,
     );
   }
 
   try {
-    createPredict({
+    await createPredict({
       guildId,
       channelId,
       authorId: author.id,
       targetId: target.id,
-      message: stored,
+      content: stored,
       type,
     });
   } catch (err) {

@@ -6,6 +6,7 @@ import {
   findAndResolveMatchingCounter,
 } from '../db.js';
 import { validateEmoji } from '../util/emoji.js';
+import { createDunkAttachment } from '../util/dunk.js';
 
 const DAILY_LIMIT = 4;
 const DAILY_LIMIT_ENABLED = false;
@@ -66,8 +67,17 @@ export async function execute(interaction) {
         resolvedAt: new Date(),
       });
     } catch (e) {}
+    
+    // L'auteur du counter est celui qui dunk, l'auteur de l'interaction (predict) est celui qui se fait dunk
+    const counterAuthor = await interaction.client.users.fetch(matchingCounter.authorId).catch(() => target);
+    const attachment = await createDunkAttachment(
+      counterAuthor.displayAvatarURL({ extension: 'png', size: 256 }),
+      author.displayAvatarURL({ extension: 'png', size: 256 })
+    );
+
     return interaction.reply({
-      content: `COUNTER : <@${matchingCounter.authorId}> a contré la prédiction de <@${author.id}> https://tenor.com/view/venom-dunking-on-spiderman-gif-26119954`,
+      content: `COUNTER : <@${matchingCounter.authorId}> a contré la prédiction de <@${author.id}>`,
+      files: [attachment]
     });
   }
 

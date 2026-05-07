@@ -12,6 +12,11 @@ if (!DISCORD_TOKEN || !CLIENT_ID) {
 
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
+const commands = [
+  predictCommand.data.toJSON(),
+  counterpredictCommand.data.toJSON(),
+];
+
 const guildIds = (GUILD_ID ?? '')
   .split(',')
   .map((s) => s.trim())

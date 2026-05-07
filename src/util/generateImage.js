@@ -45,13 +45,13 @@ export async function createDunkAttachment(authorAvatarUrl, targetAvatarUrl) {
 }
 
 /**
- * Generate a composite image pasting the target avatar onto puppetmaster.png
+ * Generate a composite image pasting the target avatar onto puppetmaster.jpg
  * and return a Discord AttachmentBuilder ready to be sent.
  * @param {string} targetAvatarUrl 
  * @returns {Promise<AttachmentBuilder>}
  */
 export async function createPuppetMasterAttachment(targetAvatarUrl) {
-  const templatePath = path.resolve(__dirname, '..', '..', 'assets', 'puppetmaster.png');
+  const templatePath = path.resolve(__dirname, '..', '..', 'assets', 'puppetmaster.jpg');
 
   // Fetch avatar image as array buffer
   const targetRes = await fetch(targetAvatarUrl);
@@ -68,5 +68,5 @@ export async function createPuppetMasterAttachment(targetAvatarUrl) {
     .png()
     .toBuffer();
 
-  return new AttachmentBuilder(result, { name: 'puppetmaster.png' });
+  return new AttachmentBuilder(result, { name: 'puppetmaster.jpg' });
 }

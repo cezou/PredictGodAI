@@ -55,45 +55,6 @@ export async function execute(interaction) {
     }
   }
 
-  const counterPredicts = await popActivePredictsFor(channelId, author.id, 'counter', target.id);
-  const normalized = normalizeForMatch(stored);
-  let matchingCounter = null;
-  const failedCounters = [];
-
-  for (const c of counterPredicts) {
-    if (normalizeForMatch(c.content) === normalized) {
-      matchingCounter = c;
-    } else {
-      failedCounters.push(c);
-    }
-  }
-
-  if (matchingCounter) {
-    try {
-      await createPredict({
-        guildId,
-        channelId,
-        authorId: author.id,
-        targetId: target.id,
-        content: stored,
-        type,
-        resolvedAt: new Date(),
-      });
-    } catch (e) {}
-    
-    // L'auteur du counter est celui qui dunk, l'auteur de l'interaction (predict) est celui qui se fait dunk
-    const counterAuthor = await interaction.client.users.fetch(matchingCounter.authorId).catch(() => target);
-    const attachment = await createDunkAttachment(
-      counterAuthor.displayAvatarURL({ extension: 'png', size: 256 }),
-      author.displayAvatarURL({ extension: 'png', size: 256 })
-    );
-
-    return interaction.reply({
-      content: `COUNTER : <@${matchingCounter.authorId}> a contré la prédiction de <@${author.id}>`,
-      files: [attachment]
-    });
-  }
-
   if (await hasActivePredict(channelId, author.id, target.id, type)) {
     return reply(
       `You can't predict twice a same people, wait for him to answer, we never know I swear`,
@@ -116,19 +77,6 @@ export async function execute(interaction) {
       );
     }
     throw err;
-  }
-
-  // Affichage des counters ratés s'il y en a, on les envoie dans le channel séparément
-  for (const row of failedCounters) {
-    const content = `-# <@${row.authorId}> counter-predicted\n${row.content}`;
-    try {
-      await interaction.channel.send({
-        content,
-        allowedMentions: { parse: [] },
-      });
-    } catch (err) {
-      console.error('Failed to send counterpredict reveal:', err);
-    }
   }
 
   if (type === 'reaction') {

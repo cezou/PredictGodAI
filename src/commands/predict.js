@@ -106,6 +106,18 @@ export async function execute(interaction) {
       channelId,
       authorId: author.id,
       targetId: target.id,
+      content: stored,
+      type,
+    });
+  } catch (err) {
+    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      return reply(
+        `You can't predict twice a same people, wait for him to answer, we never know I swear`,
+      );
+    }
+    throw err;
+  }
+
   // Affichage des counters ratés s'il y en a, on les envoie dans le channel séparément
   for (const row of failedCounters) {
     const content = `-# <@${row.authorId}> counter-predicted\n${row.content}`;
@@ -117,18 +129,6 @@ export async function execute(interaction) {
     } catch (err) {
       console.error('Failed to send counterpredict reveal:', err);
     }
-  }
-
-      content: stored,
-      type,
-    });
-  } catch (err) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      return reply(
-        `You can't predict twice a same people, wait for him to answer, we never know I swear`,
-      );
-    }
-    throw err;
   }
 
   if (type === 'reaction') {

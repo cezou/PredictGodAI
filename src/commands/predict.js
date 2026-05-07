@@ -3,7 +3,8 @@ import {
   countTodayPredicts,
   hasActivePredict,
   createPredict,
-  findAndResolveMatchingCounter,
+  popActivePredictsFor,
+  normalizeForMatch
 } from '../db.js';
 import { validateEmoji } from '../util/emoji.js';
 import { createDunkAttachment } from '../util/generateImage.js';
@@ -54,7 +55,19 @@ export async function execute(interaction) {
     }
   }
 
-  const matchingCounter = await findAndResolveMatchingCounter(channelId, author.id, stored);
+  const counterPredicts = await popActivePredictsFor(channelId, author.id, 'counter', target.id);
+  const normalized = normalizeForMatch(stored);
+  let matchingCounter = null;
+  const failedCounters = [];
+
+  for (const c of counterPredicts) {
+    if (normalizeForMatch(c.content) === normalized) {
+      matchingCounter = c;
+    } else {
+      failedCounters.push(c);
+    }
+  }
+
   if (matchingCounter) {
     try {
       await createPredict({
@@ -93,6 +106,19 @@ export async function execute(interaction) {
       channelId,
       authorId: author.id,
       targetId: target.id,
+  // Affichage des counters ratés s'il y en a, on les envoie dans le channel séparément
+  for (const row of failedCounters) {
+    const content = `-# <@${row.authorId}> counter-predicted\n${row.content}`;
+    try {
+      await interaction.channel.send({
+        content,
+        allowedMentions: { parse: [] },
+      });
+    } catch (err) {
+      console.error('Failed to send counterpredict reveal:', err);
+    }
+  }
+
       content: stored,
       type,
     });

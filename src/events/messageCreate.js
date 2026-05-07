@@ -17,16 +17,11 @@ export function register(client) {
         message.author.id,
         'message',
       );
-      counterPredicts = await popActivePredictsFor(
-        message.channel.id,
-        message.author.id,
-        'counter',
-      );
     } catch (err) {
       console.error('DB error in messageCreate:', err);
       return;
     }
-    if (!messagePredicts.length && !counterPredicts.length) return;
+    if (!messagePredicts.length) return;
 
     const normalizedMessage = normalizeForMatch(message.content);
 
@@ -57,18 +52,6 @@ export function register(client) {
         } catch (err) {
           console.error('Failed to send failed predict reveal:', err);
         }
-      }
-    }
-
-    for (const row of counterPredicts) {
-      const content = `-# <@${row.authorId}> counter-predicted\n${row.content}`;
-      try {
-        await message.reply({
-          content,
-          allowedMentions: { repliedUser: false, parse: [] },
-        });
-      } catch (err) {
-        console.error('Failed to send counterpredict reveal:', err);
       }
     }
   });

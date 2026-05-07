@@ -6,7 +6,7 @@ import {
   findAndResolveMatchingCounter,
 } from '../db.js';
 import { validateEmoji } from '../util/emoji.js';
-import { createDunkAttachment } from '../util/dunk.js';
+import { createDunkAttachment } from '../util/generateImage.js';
 
 const DAILY_LIMIT = 4;
 const DAILY_LIMIT_ENABLED = false;

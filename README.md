@@ -93,3 +93,4 @@ To enable the automated remote deployment, define the following variables in you
 - `SSH_PRIVATE_KEY`: The private SSH key corresponding to the public key authorized on the server.
 
 Once configured, pushing to `main` will automatically build, pull, and run the latest image. The SQLite database is stored in a named bind volume mapped to `~/predictgodai/data` on the host, ensuring your data is safely persisted between container updates.
+ 

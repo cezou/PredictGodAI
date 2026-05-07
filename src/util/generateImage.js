@@ -63,7 +63,7 @@ export async function createPuppetMasterAttachment(targetAvatarUrl) {
   // Composite the image onto template at left: 311, top: 460
   const result = await sharp(templatePath)
     .composite([
-      { input: targetImg, left: 311, top: 460 },
+      { input: targetImg, left: 307, top: 614 },
     ])
     .png()
     .toBuffer();

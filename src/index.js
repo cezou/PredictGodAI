@@ -39,7 +39,7 @@ client.once('clientReady', (c) => {
 });
 
 try {
-  await sequelize.sync();
+  await sequelize.sync({ alter: true });
   console.log('Database synced');
 
   // Register commands

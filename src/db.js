@@ -29,15 +29,19 @@ export async function countTodayPredicts(authorId, type) {
   });
 }
 
-export async function hasActivePredict(channelId, authorId, targetId, type) {
+export async function hasActivePredict(channelId, authorId, targetId, type, originalTargetId = null) {
+  const whereClause = {
+    channelId,
+    authorId,
+    targetId,
+    type,
+    resolvedAt: null,
+  };
+  if (originalTargetId !== null) {
+    whereClause.originalTargetId = originalTargetId;
+  }
   const predict = await Prediction.findOne({
-    where: {
-      channelId,
-      authorId,
-      targetId,
-      type,
-      resolvedAt: null,
-    },
+    where: whereClause,
   });
   return !!predict;
 }
@@ -47,13 +51,14 @@ export async function createPredict({
   channelId,
   authorId,
   targetId,
+  originalTargetId = null,
   content,
   type,
   resolvedAt = null,
 }) {
   // Enforce unique active predict
   if (resolvedAt === null) {
-    const existing = await hasActivePredict(channelId, authorId, targetId, type);
+    const existing = await hasActivePredict(channelId, authorId, targetId, type, originalTargetId);
     if (existing) {
       const err = new Error('SQLITE_CONSTRAINT_UNIQUE');
       err.code = 'SQLITE_CONSTRAINT_UNIQUE';
@@ -61,17 +66,17 @@ export async function createPredict({
     }
   }
 
-  await Prediction.create({ guildId, channelId, authorId, targetId, content, type, resolvedAt });
+  await Prediction.create({ guildId, channelId, authorId, targetId, originalTargetId, content, type, resolvedAt });
 }
 
 export function normalizeForMatch(str) {
   if (!str) return '';
-  return str.toLowerCase().replace(/[\s.,/#!$%^&*;:{}=\-_`~()]/g, '');
+  return str.toLowerCase().replace(/[\s.,/#!$%^&*;:{}=\-_~()]/g, '');
 }
 
-export async function findAndResolveMatchingPredict(channelId, authorId, content) {
+export async function findAndResolveMatchingPredict(channelId, authorId, originalTargetId, content) {
   const activePredicts = await Prediction.findAll({
-    where: { channelId, authorId, type: { [Op.in]: ['message', 'reaction'] }, resolvedAt: null },
+    where: { channelId, authorId, targetId: originalTargetId, type: { [Op.in]: ['message', 'reaction'] }, resolvedAt: null },
   });
   const normalized = normalizeForMatch(content);
   for (const p of activePredicts) {
@@ -99,7 +104,7 @@ export async function findAndResolveMatchingCounter(channelId, targetId, content
   return null;
 }
 
-export async function popActivePredictsFor(channelId, targetId, type, authorId = null) {
+export async function popActivePredictsFor(channelId, targetId, type, authorId = null, originalTargetId = null) {
   const whereClause = {
     channelId,
     targetId,
@@ -108,6 +113,12 @@ export async function popActivePredictsFor(channelId, targetId, type, authorId =
   };
   if (authorId) {
     whereClause.authorId = authorId;
+  }
+  if (originalTargetId) {
+    whereClause[Op.or] = [
+      { originalTargetId: originalTargetId },
+      { originalTargetId: null }
+    ];
   }
 
   const predicts = await Prediction.findAll({ where: whereClause });

@@ -62,8 +62,8 @@ export function register(client) {
       // Résoudre les counters visant cette prédiction qui vient de se terminer
       let counters = [];
       try {
-        // On récupère les counters dirigés contre l'auteur de la prédiction (row.authorId)
-        counters = await popActivePredictsFor(message.channel.id, row.authorId, 'counter');
+        // On récupère les counters dirigés contre l'auteur de la prédiction (row.authorId) ET qui ciblaient (originalTargetId) l'auteur de la réaction (user.id) - ou les anciens counters (null)
+        counters = await popActivePredictsFor(message.channel.id, row.authorId, 'counter', null, user.id);
       } catch (err) {
         console.error('DB error pour résoudre les counters:', err);
       }

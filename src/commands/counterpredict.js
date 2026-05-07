@@ -26,11 +26,18 @@ export const data = new SlashCommandBuilder()
       .setRequired(true)
       .setMaxLength(500),
   )
+  .addUserOption((opt) =>
+    opt
+      .setName('originalpredictiontarget')
+      .setDescription('The person they are predicting (defaults to yourself)')
+      .setRequired(false),
+  )
   .setDMPermission(false);
 
 export async function execute(interaction) {
   const target = interaction.options.getUser('target', true);
   const rawPrediction = interaction.options.getString('predictiontocounter', true);
+  const originalPredictionTarget = interaction.options.getUser('originalpredictiontarget') || interaction.user;
   const author = interaction.user;
   const channelId = interaction.channelId;
   const guildId = interaction.guildId;
@@ -53,7 +60,7 @@ export async function execute(interaction) {
     }
   }
 
-  const matchingPredict = await findAndResolveMatchingPredict(channelId, target.id, trimmed);
+  const matchingPredict = await findAndResolveMatchingPredict(channelId, target.id, originalPredictionTarget.id, trimmed);
   if (matchingPredict) {
     try {
       await createPredict({
@@ -61,6 +68,7 @@ export async function execute(interaction) {
         channelId,
         authorId: author.id,
         targetId: target.id,
+        originalTargetId: originalPredictionTarget.id,
         content: trimmed,
         type: 'counter',
         resolvedAt: new Date(),
@@ -73,12 +81,12 @@ export async function execute(interaction) {
     );
 
     return interaction.reply({
-      content: `COUNTER : <@${author.id}> a contré la prédiction de <@${target.id}>`,
+      content: `COUNTER : <@${author.id}> a contré la prédiction de <@${target.id}> (qui prédisait <@${originalPredictionTarget.id}>)`,
       files: [attachment],
     });
   }
 
-  if (await hasActivePredict(channelId, author.id, target.id, 'counter')) {
+  if (await hasActivePredict(channelId, author.id, target.id, 'counter', originalPredictionTarget.id)) {
     return reply(
       `You already have an active counter-predict on this person in this channel, wait for it to resolve`,
     );
@@ -90,6 +98,7 @@ export async function execute(interaction) {
       channelId,
       authorId: author.id,
       targetId: target.id,
+      originalTargetId: originalPredictionTarget.id,
       content: trimmed,
       type: 'counter',
     });

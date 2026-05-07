@@ -3,9 +3,7 @@ import {
   countTodayPredicts,
   hasActivePredict,
   createPredict,
-  findAndResolveMatchingPredict,
 } from '../db.js';
-import { createDunkAttachment } from '../util/generateImage.js';
 
 const DAILY_LIMIT = 4;
 const DAILY_LIMIT_ENABLED = false;
@@ -58,32 +56,6 @@ export async function execute(interaction) {
     if (todayCount >= DAILY_LIMIT) {
       return reply("You're cooked chief, try again tomorrow 💀");
     }
-  }
-
-  const matchingPredict = await findAndResolveMatchingPredict(channelId, target.id, originalPredictionTarget.id, trimmed);
-  if (matchingPredict) {
-    try {
-      await createPredict({
-        guildId,
-        channelId,
-        authorId: author.id,
-        targetId: target.id,
-        originalTargetId: originalPredictionTarget.id,
-        content: trimmed,
-        type: 'counter',
-        resolvedAt: new Date(),
-      });
-    } catch (e) {}
-
-    const attachment = await createDunkAttachment(
-      author.displayAvatarURL({ extension: 'png', size: 256 }),
-      target.displayAvatarURL({ extension: 'png', size: 256 })
-    );
-
-    return interaction.reply({
-      content: `COUNTER : <@${author.id}> a contré la prédiction de <@${target.id}> (qui prédisait <@${originalPredictionTarget.id}>)`,
-      files: [attachment],
-    });
   }
 
   if (await hasActivePredict(channelId, author.id, target.id, 'counter', originalPredictionTarget.id)) {

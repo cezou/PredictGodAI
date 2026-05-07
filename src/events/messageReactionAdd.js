@@ -1,5 +1,5 @@
 import { Events } from 'discord.js';
-import { popActiveReactionPredictsFor } from '../db.js';
+import { popActivePredictsFor } from '../db.js';
 
 export const name = Events.MessageReactionAdd;
 
@@ -37,7 +37,12 @@ export function register(client) {
 
     let consumed;
     try {
-      consumed = popActiveReactionPredictsFor(message.channel.id, user.id, message.author.id);
+      consumed = await popActivePredictsFor(
+        message.channel.id,
+        user.id,
+        'reaction',
+        message.author.id,
+      );
     } catch (err) {
       console.error('DB error in messageReactionAdd:', err);
       return;
@@ -46,8 +51,8 @@ export function register(client) {
 
     for (const row of consumed) {
       try {
-        const customMatch = row.message.match(/^<a?:\w+:(\d+)>$/);
-        const reactPayload = customMatch ? customMatch[1] : row.message;
+        const customMatch = row.content.match(/^<a?:\w+:(\d+)>$/);
+        const reactPayload = customMatch ? customMatch[1] : row.content;
         await message.react(reactPayload);
       } catch (err) {
         console.error('Failed to add predicted reaction:', err);

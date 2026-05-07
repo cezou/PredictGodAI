@@ -6,12 +6,15 @@ A Discord bot for hidden predictions. Predict what someone is about to say in a 
 
 ## How it works
 
-- `/predict target:@someone message:"what they'll say"`
-- The command is silent for everyone except you (ephemeral reply).
-- On the **target's first message** in **the same channel**, the bot posts an embed:
-  > **@you predicted**
-  > « what they'll say »
-- **1 active predict max** per (author, target, channel) tuple.
+- `/predict target:@someone prediction:"what they'll say or an emoji"`
+  - Predict a text message or a specific reaction (emoji) the target will use.
+  - The command is silent for everyone except you (ephemeral reply).
+  - On the **target's first text message or reaction** in **the same channel**, the bot posts an embed revealing the prediction.
+- `/counterpredict target:@someone predictiontocounter:"what they predicted"`
+  - Actively counter a prediction made by someone else against you!
+  - If they already predicted it, the counter applies instantly and fires a special dunking GIF in the chat.
+  - If you set it up first, it stays hidden until they attempt to predict it.
+- **1 active predict max** per (author, target, channel, type).
 - **Daily limit per author** (configurable, default 4, currently disabled in code via `DAILY_LIMIT_ENABLED`). Reset at midnight Europe/Paris. Beyond limit: `You're cooked chief, try again tomorrow 💀`.
 
 ## Setup
@@ -52,9 +55,10 @@ You should see: `Logged in as PredictGodAI#xxxx`.
 
 ## Testing
 
-1. Account A: `/predict target:@B message:"hello"` → ephemeral confirmation, nothing visible in the channel.
-2. B sends a message → the bot replies with the embed `@A predicted / « hello »`.
-3. Try `/predict @B "x"` twice in a row in the same channel → second call refused.
+1. **Text Predict**: Account A uses `/predict target:@B prediction:"hello"` → ephemeral confirmation, nothing visible in the channel. B sends a message containing "hello" → the bot replies to reveal the prediction.
+2. **Reaction Predict**: Account A uses `/predict target:@B prediction:"🔥"` → B reacts with 🔥 on any message → the prediction is revealed.
+3. **Counter-Predict**: Account A predicts "loser" against B. Account B uses `/counterpredict target:@A predictiontocounter:"loser"` → Instantly triggers a public Venom dunking GIF in the chat defeating A's prediction.
+4. Try `/predict target:@B prediction:"x"` twice in a row in the same channel → second call refused.
 
 ## Stack
 
@@ -64,30 +68,28 @@ You should see: `Logged in as PredictGodAI#xxxx`.
 
 ## Deployment
 
-Targeted: **Oracle Cloud Always Free** (Linux VM). The bot runs as a systemd service, SQLite lives on the VM disk.
+The project is deployed via **GitHub Actions** using a **Docker** container. When pushing to the `main` branch, the CI/CD pipeline builds the image, pushes it to Docker Hub, and runs it on the target VPS (e.g. Oracle Cloud).
 
-```ini
-# /etc/systemd/system/predictgodai.service
-[Unit]
-Description=PredictGodAI Discord bot
-After=network-online.target
-Wants=network-online.target
+### 1. VPS Setup (Oracle Cloud / Linux)
 
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/PredictGodAI
-ExecStart=/usr/bin/node src/index.js
-Restart=on-failure
-RestartSec=5
-EnvironmentFile=/home/ubuntu/PredictGodAI/.env
-
-[Install]
-WantedBy=multi-user.target
-```
+On your server, ensure Docker is installed and prepare the directory for the bot runtime:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now predictgodai
-journalctl -u predictgodai -f   # tail logs
+mkdir -p ~/predictgodai/data
+nano ~/predictgodai/.env
 ```
+*(Configure your `.env` file with `DISCORD_TOKEN`, `CLIENT_ID`, etc.)*
+
+Generate an SSH key pair on the server if you don't have one, and add the public key to `~/.ssh/authorized_keys` so GitHub Actions can connect via SSH as your deploy user.
+
+### 2. GitHub Secrets
+
+To enable the automated remote deployment, define the following variables in your GitHub repository's **Settings > Secrets and variables > Actions**:
+
+- `DOCKER_USERNAME`: Your Docker Hub username.
+- `DOCKER_PASSWORD`: A Docker Hub Personal Access Token.
+- `SERVER_IP`: The public IP of your VPS.
+- `SERVER_USER`: The SSH user (e.g., `ubuntu` or `opc`).
+- `SSH_PRIVATE_KEY`: The private SSH key corresponding to the public key authorized on the server.
+
+Once configured, pushing to `main` will automatically build, pull, and run the latest image. The SQLite database is stored in a named bind volume mapped to `~/predictgodai/data` on the host, ensuring your data is safely persisted between container updates.

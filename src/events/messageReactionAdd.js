@@ -76,9 +76,14 @@ export function register(client) {
             const predictAuthor = await message.client.users.fetch(row.authorId).catch(() => null);
             
             if (counterAuthor && predictAuthor) {
+              let originalAvatarUrl = null;
+              if (c.originalTargetId && c.originalTargetId !== c.authorId) {
+                originalAvatarUrl = user.displayAvatarURL({ extension: 'png', size: 256 });
+              }
               const attachment = await createDunkAttachment(
                 counterAuthor.displayAvatarURL({ extension: 'png', size: 256 }),
-                predictAuthor.displayAvatarURL({ extension: 'png', size: 256 })
+                predictAuthor.displayAvatarURL({ extension: 'png', size: 256 }),
+                originalAvatarUrl
               );
               
               await message.channel.send({

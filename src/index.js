@@ -1,15 +1,15 @@
 import 'dotenv/config';
-import { Client, Collection, GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
+import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js';
 import * as predictCommand from './commands/predict.js';
 import * as counterpredictCommand from './commands/counterpredict.js';
 import * as interactionCreate from './events/interactionCreate.js';
 import * as messageCreate from './events/messageCreate.js';
 import * as messageReactionAdd from './events/messageReactionAdd.js';
 import { sequelize } from './db.js';
+import { deployCommands } from './deploy-commands.js';
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
-const guildIdEnv = process.env.GUILD_ID;
 
 if (!token || !clientId) {
   console.error('DISCORD_TOKEN and CLIENT_ID are missing in .env');
@@ -41,32 +41,11 @@ client.once('clientReady', (c) => {
 try {
   await sequelize.sync({ alter: true });
   console.log('Database synced');
-
-  // Register commands
-  const rest = new REST({ version: '10' }).setToken(token);
-  const commandsToDeploy = [
-    predictCommand.data.toJSON(),
-    counterpredictCommand.data.toJSON(),
-  ];
-
-  const guildIds = (guildIdEnv ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-
-  if (guildIds.length === 0) {
-    console.log(`Deploying ${commandsToDeploy.length} command(s) globally...`);
-    const data = await rest.put(Routes.applicationCommands(clientId), { body: commandsToDeploy });
-    console.log(`✅ ${data.length} command(s) registered globally.`);
-  } else {
-    for (const gId of guildIds) {
-      console.log(`Deploying ${commandsToDeploy.length} command(s) for guild ${gId}...`);
-      const data = await rest.put(Routes.applicationGuildCommands(clientId, gId), {
-        body: commandsToDeploy,
-      });
-      console.log(`✅ ${data.length} command(s) registered for guild ${gId}.`);
-    }
-  }
-
+  
+  // Déploiement automatique des commandes Discord
+  await deployCommands(clientId, token);
 } catch (err) {
-  console.error('Failed to sync database or deploy commands:', err);
+  console.error('Failed to sync database:', err);
   process.exit(1);
 }
 

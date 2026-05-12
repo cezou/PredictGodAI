@@ -72,10 +72,14 @@ export async function execute(interaction) {
       let typeLabel = 'Message';
       if (p.type === 'reaction') typeLabel = 'Reaction';
       if (p.type === 'counter') typeLabel = 'Counter';
-      const label = truncate(`${typeLabel} on target - ${p.content}`, 90); 
+      
+      const targetUser = interaction.client.users.cache.get(p.targetId);
+      const targetName = targetUser ? `@${targetUser.username}` : `<@${p.targetId}>`;
+
+      const label = truncate(`${typeLabel}: ${p.content}`, 90);
       return {
         label: label,
-        description: truncate(`ID: ${p.id} | In channel #${p.channelId}`, 100),
+        description: truncate(`ID: ${p.id} | Target: ${targetName}`, 100),
         value: p.id.toString(),
       };
     });

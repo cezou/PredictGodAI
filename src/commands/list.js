@@ -42,18 +42,36 @@ export async function execute(interaction) {
       return a.createdAt - b.createdAt;
     });
 
+    let description = '';
+    let currentChannelGrp = null;
+
+    for (const p of predicts) {
+      if (p.channelId !== currentChannelGrp) {
+        if (description.length > 0) description += '\n\n';
+        description += `Channel: <#${p.channelId}>\n`;
+        currentChannelGrp = p.channelId;
+      } else {
+        description += '\n\n';
+      }
+
+      if (p.type === 'counter') {
+        description += `Counterpredicted "${p.content}" from <@${p.targetId}> to <@${p.originalTargetId}>`;
+      } else if (p.type === 'reaction') {
+        description += `Predicted the "${p.content}" reaction from <@${p.targetId}>`;
+      } else {
+        description += `Predicted "${p.content}" from <@${p.targetId}>`;
+      }
+    }
+
     const embed = new EmbedBuilder()
       .setTitle('Your Active Predictions')
       .setColor('#0099ff')
-      .setDescription(
-        predicts.map(p => {
-          let content = p.type === 'reaction' ? `*Reaction:* ${p.content}` : `*Message:* "${p.content}"`;
-          return `**ID:** \`${p.id}\` | **Channel:** <#${p.channelId}> | **Target:** <@${p.targetId}>\n└ ${content}`;
-        }).join('\n\n')
-      );
+      .setDescription(description);
 
     const options = predicts.map(p => {
-      const typeLabel = p.type === 'reaction' ? 'Reaction' : 'Message';
+      let typeLabel = 'Message';
+      if (p.type === 'reaction') typeLabel = 'Reaction';
+      if (p.type === 'counter') typeLabel = 'Counter';
       const label = truncate(`${typeLabel} on target - ${p.content}`, 90); 
       return {
         label: label,

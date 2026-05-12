@@ -133,3 +133,22 @@ export async function popActivePredictsFor(channelId, targetId, type, authorId =
 
   return consumed;
 }
+
+export async function getUserActivePredicts(authorId, guildId) {
+  return Prediction.findAll({
+    where: {
+      authorId,
+      guildId,
+      resolvedAt: null,
+    },
+  });
+}
+
+export async function deletePredicts(ids, authorId) {
+  return Prediction.destroy({
+    where: {
+      id: { [Op.in]: ids },
+      authorId, // Security check
+    },
+  });
+}

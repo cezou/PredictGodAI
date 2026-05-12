@@ -68,13 +68,18 @@ export async function execute(interaction) {
       .setColor('#0099ff')
       .setDescription(description);
 
-    const options = predicts.map(p => {
+    const options = await Promise.all(predicts.map(async p => {
       let typeLabel = 'Message';
       if (p.type === 'reaction') typeLabel = 'Reaction';
       if (p.type === 'counter') typeLabel = 'Counter';
       
-      const targetUser = interaction.client.users.cache.get(p.targetId);
-      const targetName = targetUser ? `@${targetUser.username}` : `<@${p.targetId}>`;
+      let targetName = `<@${p.targetId}>`;
+      try {
+        const targetUser = await interaction.client.users.fetch(p.targetId);
+        if (targetUser) targetName = `@${targetUser.username}`;
+      } catch (err) {
+        // Ignore fetch error, fallback to ID
+      }
 
       const label = truncate(`${typeLabel}: ${p.content}`, 90);
       return {
@@ -82,7 +87,7 @@ export async function execute(interaction) {
         description: truncate(`ID: ${p.id} | Target: ${targetName}`, 100),
         value: p.id.toString(),
       };
-    });
+    }));
 
     const selectMenu = new StringSelectMenuBuilder()
       .setCustomId('delete_predicts_menu')

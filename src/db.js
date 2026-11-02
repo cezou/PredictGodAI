@@ -4,6 +4,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DateTime } from 'luxon';
 import definePrediction from './models/Prediction.js';
+import { normalizeForMatch } from './util/normalize.js';
+
+export { normalizeForMatch };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DB_PATH = resolve(__dirname, '..', 'data', 'predicts.db');
@@ -17,6 +20,14 @@ export const sequelize = new Sequelize({
 });
 
 export const Prediction = definePrediction(sequelize);
+
+// Un predict non résolu expire après PREDICT_TTL_HOURS : il ne se déclenche plus et ne bloque
+// plus de nouveau predict (les vieux predicts sortaient hors contexte des semaines plus tard).
+const PREDICT_TTL_MS = Number(process.env.PREDICT_TTL_HOURS || 24) * 60 * 60 * 1000;
+
+function active() {
+  return { resolvedAt: null, createdAt: { [Op.gte]: new Date(Date.now() - PREDICT_TTL_MS) } };
+}
 
 export async function countTodayPredicts(authorId, type) {
   const startOfDayParis = DateTime.now().setZone('Europe/Paris').startOf('day').toJSDate();
@@ -35,7 +46,7 @@ export async function hasActivePredict(channelId, authorId, targetId, type, orig
     authorId,
     targetId,
     type,
-    resolvedAt: null,
+    ...active(),
   };
   if (originalTargetId !== null) {
     whereClause.originalTargetId = originalTargetId;
@@ -69,14 +80,18 @@ export async function createPredict({
   await Prediction.create({ guildId, channelId, authorId, targetId, originalTargetId, content, type, resolvedAt });
 }
 
-export function normalizeForMatch(str) {
-  if (!str) return '';
-  return str.toLowerCase().replace(/[\s.,/#!$%^&*;:{}=\-_~()]/g, '');
+export async function getActivePredictsFor(channelId, targetId, type) {
+  return Prediction.findAll({ where: { channelId, targetId, type, ...active() } });
+}
+
+export async function resolvePredict(predict) {
+  predict.resolvedAt = new Date();
+  await predict.save();
 }
 
 export async function findAndResolveMatchingPredict(channelId, authorId, originalTargetId, content) {
   const activePredicts = await Prediction.findAll({
-    where: { channelId, authorId, targetId: originalTargetId, type: { [Op.in]: ['message', 'reaction'] }, resolvedAt: null },
+    where: { channelId, authorId, targetId: originalTargetId, type: { [Op.in]: ['message', 'reaction'] }, ...active() },
   });
   const normalized = normalizeForMatch(content);
   for (const p of activePredicts) {
@@ -91,7 +106,7 @@ export async function findAndResolveMatchingPredict(channelId, authorId, origina
 
 export async function findAndResolveMatchingCounter(channelId, targetId, content) {
   const activeCounters = await Prediction.findAll({
-    where: { channelId, targetId, type: 'counter', resolvedAt: null },
+    where: { channelId, targetId, type: 'counter', ...active() },
   });
   const normalized = normalizeForMatch(content);
   for (const c of activeCounters) {
@@ -109,7 +124,7 @@ export async function popActivePredictsFor(channelId, targetId, type, authorId =
     channelId,
     targetId,
     type,
-    resolvedAt: null,
+    ...active(),
   };
   if (authorId) {
     whereClause.authorId = authorId;
@@ -139,7 +154,7 @@ export async function getUserActivePredicts(authorId, guildId) {
     where: {
       authorId,
       guildId,
-      resolvedAt: null,
+      ...active(),
     },
   });
 }

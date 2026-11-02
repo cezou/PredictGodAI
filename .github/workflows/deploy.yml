@@ -47,9 +47,14 @@ jobs:
             docker stop predictgodai || true
             docker rm predictgodai || true
             
+            # Réseau partagé avec le modèle de décision (conteneur predictgod-judge, lancé par scripts/setup-judge.sh)
+            docker network create predictgod 2>/dev/null || true
+
             # Lancer le nouveau conteneur en liant le fichier .env et le dossier data (base SQLite)
             docker run -d --name predictgodai \
               --restart unless-stopped \
+              --network predictgod \
+              -e JUDGE_URL=http://predictgod-judge:8080 \
               --env-file /home/${{ secrets.SERVER_USER }}/predictgodai/.env \
               -v /home/${{ secrets.SERVER_USER }}/predictgodai/data:/usr/src/app/data \
               ${{ secrets.DOCKER_USERNAME }}/predictgodai:latest

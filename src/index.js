@@ -8,6 +8,7 @@ import * as messageCreate from './events/messageCreate.js';
 import * as messageReactionAdd from './events/messageReactionAdd.js';
 import { sequelize } from './db.js';
 import { deployCommands } from './deploy-commands.js';
+import { warmUpJudge } from './judge/index.js';
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
@@ -38,6 +39,7 @@ messageReactionAdd.register(client);
 
 client.once('clientReady', (c) => {
   console.log(`Logged in as ${c.user.tag}`);
+  warmUpJudge().catch(() => {});
 });
 
 try {

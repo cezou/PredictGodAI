@@ -1,5 +1,6 @@
 import { Events } from 'discord.js';
-import { popActivePredictsFor, normalizeForMatch } from '../db.js';
+import { popActivePredictsFor } from '../db.js';
+import { isCounterMatch } from '../judge/index.js';
 import { createDunkAttachment } from '../util/generateImage.js';
 
 export const name = Events.MessageReactionAdd;
@@ -69,7 +70,7 @@ export function register(client) {
       }
 
       for (const c of counters) {
-        if (normalizeForMatch(c.content) === normalizeForMatch(row.content)) {
+        if (await isCounterMatch(c.content, row.content)) {
           // Le counter est un Succès ("Dunk")
           try {
             const counterAuthor = await message.client.users.fetch(c.authorId).catch(() => null);

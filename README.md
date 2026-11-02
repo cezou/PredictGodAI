@@ -38,6 +38,26 @@ PredictGodAI is a Discord bot that allows users to make hidden predictions about
    npm run start
    ```
 
+## Predict validation (local decision model)
+
+A predict is validated on its **substance**, not its exact wording: `/predict @x va m'insulter` is validated if `@x` writes `allez ferme ta gueule`. Counter-predicts are compared to the predict the same way.
+
+- When the target writes in the channel, the bot builds a context: the 5 messages before the predictor's last message, everything up to the target's message, then that message (max 20 messages / 30 min). Without a predictor message: the 5 messages before the target's message.
+- A small local LLM ([llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server`, default `gemma-3n-E4B-it-Q4_0`, ~3 GB RAM, ~2.4 s per judgement on the OCI Ampere A1, 97 % on `scripts/judge-cases.json`) answers "oui"/"non" in one token. The score is `P(oui) / (P(oui) + P(non))`, and the predict is validated when `score >= JUDGE_ACCEPT`.
+- An exact match is validated without calling the model. If the model is unreachable, the bot falls back to exact matching.
+
+Environment variables (all optional):
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `JUDGE_ENABLED` | `true` | `false` = exact matching only |
+| `JUDGE_URL` | `http://127.0.0.1:8080` | `llama-server` URL |
+| `JUDGE_ACCEPT` | `0.5` | Score threshold to validate a predict |
+| `JUDGE_TIMEOUT_MS` | `15000` | Timeout per judgement |
+| `PREDICT_TTL_HOURS` | `24` | An unresolved predict expires after this delay (it no longer triggers nor blocks a new predict) |
+
+Run the model on the server once with `./scripts/setup-judge.sh` (downloads the model and starts the `predictgod-judge` container on the `predictgod` Docker network). Evaluate a model / tune the threshold with `JUDGE_URL=... node scripts/eval-judge.js`.
+
 ## Available Scripts
 
 - `npm run start` — Starts the bot and syncs the database and slash commands automatically.
